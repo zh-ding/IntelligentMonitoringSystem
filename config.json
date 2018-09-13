@@ -1,0 +1,10 @@
+{
+    "rtspURL": "data/test.mp4",
+    "db": {
+        "ip": "39.107.76.131", 
+        "username": "IMSadmin",
+        "pwd": "iMSDaTA@20I8",
+        "name": "intellimonitor"
+    },
+    "height": 500
+}

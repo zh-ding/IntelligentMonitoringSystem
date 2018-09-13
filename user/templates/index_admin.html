@@ -1,0 +1,37 @@
+<html>
+  <head>
+    <title>
+      智能监控管理系统
+    </title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+  </head>
+  <body class="container">
+    <div class="row">
+      <center class="col-sm-8">
+        <a style="margin:10%;" class="btn btn-success" href="/monitor">查看监控系统</a>
+      </center>
+      <div class="col-sm-4">
+          <center><span style="font-size: 24px; padding:1em;">欢迎你，{{username}}!</span><a class="btn btn-primary" href="/changepwd" role="button">修改密码</a></center>
+      </div>
+    </div>
+    <a class="btn btn-success" href="/adduser" type="button">添加用户</a>
+    <table class="table table-hover">
+        <thead>
+          <tr class="info">
+            <th width="10%">序号</th>
+            <th width="65%">用户名</th>
+            <th width="25%">删除</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in userlist %}
+          <tr>
+            <td width="10%">{{forloop.counter}}</td>
+            <td width="65%">{{user.name}}</td>
+            <td width="25%"><a class="btn-sm btn-danger" href="/delete?id={{user.id}}" type="button">删除</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </body>
+</html>
