@@ -2,7 +2,6 @@ from django.shortcuts import render
 from django.http import StreamingHttpResponse, HttpResponse
 from django.http.response import HttpResponseServerError
 from django.views.decorators import gzip
-#from monitor.ssd_tensorflow.notebooks.ssd_tensorflow import detect_image
 from tiny_yolo import tiny_yolo_gen
 from user.views import check_cookie
 from multiprocessing import Process, Queue
@@ -17,57 +16,12 @@ detection_process = False
 detection_process_username = None
 QList = {}
 
-#from queue import Queue
-'''
-class DetectionThread(Thread):
-    def __init__(self, frame, q):
-        super().__init__()
-        self.finished = False
-        self.frame = frame
-        self.q = q
-
-    def run(self):
-        try:
-            frame = detect_image(self.frame)
-            self.q.put(frame)
-        except:
-            print('runerror')
-'''
-
-
-        #ret, jpeg = cv2.imencode('.jpg', image)
-        #return jpeg.tobytes()
-'''
-def gen(camera):
-    q = Queue()
-    with open('config.json', 'r') as f:
-        conf = json.load(f)
-    height = int(conf['height'])
-    while True:
-        frame = camera.get_frame()
-        frame = cv2.resize(frame, (height, int(height*frame.shape[0]/frame.shape[1])))
-        thr = DetectionThread(frame, q)
-        thr.start()
-        start_time = time.time()
-        while True:
-            t_frame = camera.get_frame()
-            if not q.empty():
-                break
-        frame = q.get()
-        end_time = time.time()
-        print(end_time - start_time)
-
-        ret, jpeg = cv2.imencode('.jpg', frame)
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
-    print('succeed')
-'''
-
 def gen():
     q = Queue()
     p = Process(target=tiny_yolo_gen, args=(q, ))
     p.start()
     current_connected = True
+    global detection_process
     while True:
         if not q.empty():
             res = q.get()
@@ -80,13 +34,15 @@ def gen():
                     current_connected = False
                     global detection_process_username
                     detection_process_username = None
+                    if len(QList) == 0:
+                        p.terminate()
+                        detection_process = False
+                        break
             else:
                 if len(QList) == 0:
                     p.terminate()
-                    global detection_process
                     detection_process = False
                     break
-
 
 def fetch(username):
     q = Queue()
