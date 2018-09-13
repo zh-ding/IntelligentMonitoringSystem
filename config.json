@@ -1,5 +1,5 @@
 {
-    "rtspURL": "data/test.mp4",
+    "rtspURL": "rtsp://101.5.136.163:8080/h264_ulaw.sdp",
     "db": {
         "ip": "39.107.76.131", 
         "username": "IMSadmin",

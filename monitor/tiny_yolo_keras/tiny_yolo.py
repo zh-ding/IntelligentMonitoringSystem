@@ -10,6 +10,8 @@ from utils.yolo_utils import read_classes, read_anchors, generate_colors, prepro
 from multiprocessing import Queue
 import json
 from threading import Thread
+import queue
+import threading
 
 scores = None
 boxes = None
@@ -116,6 +118,7 @@ def video_detection(sess, image):
 
 
 class VideoCamera(object):
+    lock = threading.Lock()
     def __init__(self):
         with open('config.json', 'r') as f:
             conf = json.load(f)
@@ -125,7 +128,8 @@ class VideoCamera(object):
         self.video.release()
     
     def get_frame(self):
-        return self.video.read()
+        with VideoCamera.lock:
+            return self.video.read()
 
 class FilterThread(Thread):
     def __init__(self, camera, q):
@@ -134,11 +138,10 @@ class FilterThread(Thread):
         self.q = q
 
     def run(self):
-        while self.running:
+        while True:
             self.camera.get_frame()
-            print('filter')
-            if not q.empty():
-                q.get()
+            if not self.q.empty():
+                self.q.get()
                 break
 
 
@@ -157,11 +160,9 @@ def tiny_yolo_gen(q):
     image_shape = np.float32(frame.shape[0]), np.float32(frame.shape[1])
     yolo_outputs = yolo_head(yolo_model.output, anchors, len(class_names))
     scores, boxes, classes = yolo_eval(yolo_outputs, image_shape=image_shape, score_threshold=.3)
-    que = Queue()
-    while True:
+    que = queue.Queue()
+    while ret:
         start = time.time()
-        if not ret:
-            break
         th = FilterThread(camera, que)
         th.start()
         image = video_detection(sess, frame)
@@ -174,20 +175,17 @@ def tiny_yolo_gen(q):
         try:
             q.put (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
-            ret = False
             num = 0
+            ret = False
             while not ret:
                 ret, frame = camera.get_frame()
-                time.sleep(0.01)
                 num = num + 1
-                if num >= 100:
+                if num >= 100000:
                     break
-            if num >= 100:
-                break
-            print(num)
         except:
             print('yield error')
             break
+    print('yolo end.')
 
 if __name__ == '__main__':
     sess = K.get_session()
