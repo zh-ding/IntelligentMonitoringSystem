@@ -128,19 +128,18 @@ class VideoCamera(object):
         return self.video.read()
 
 class FilterThread(Thread):
-    def __init__(self, camera):
+    def __init__(self, camera, q):
         Thread.__init__(self) 
         self.camera = camera
-        self.running = True
+        self.q = q
 
     def run(self):
         while self.running:
             self.camera.get_frame()
             print('filter')
-            # time.sleep(0.01)
-
-    def stop(self):
-        self.running = False
+            if not q.empty():
+                q.get()
+                break
 
 
 def tiny_yolo_gen(q):
@@ -158,15 +157,15 @@ def tiny_yolo_gen(q):
     image_shape = np.float32(frame.shape[0]), np.float32(frame.shape[1])
     yolo_outputs = yolo_head(yolo_model.output, anchors, len(class_names))
     scores, boxes, classes = yolo_eval(yolo_outputs, image_shape=image_shape, score_threshold=.3)
-
+    que = Queue()
     while True:
         start = time.time()
         if not ret:
             break
-        th = FilterThread(camera)
+        th = FilterThread(camera, que)
         th.start()
         image = video_detection(sess, frame)
-        th.stop()
+        que.put(1)
         end = time.time()
         t = end - start
         fps  = "Fps: {:.2f}".format(1 / t)
