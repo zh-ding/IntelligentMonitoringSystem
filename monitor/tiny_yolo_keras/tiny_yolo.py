@@ -9,6 +9,7 @@ from yad2k.models.keras_yolo import yolo_head, yolo_boxes_to_corners
 from utils.yolo_utils import read_classes, read_anchors, generate_colors, preprocess_image, draw_boxes, scale_boxes
 from multiprocessing import Queue
 import json
+from threading import Thread
 
 scores = None
 boxes = None
@@ -126,6 +127,21 @@ class VideoCamera(object):
     def get_frame(self):
         return self.video.read()
 
+class FilterThread(Thread):
+    def __init__(self, camera):
+        Thread.__init__(self) 
+        self.camera = camera
+        self.running = True
+
+    def run(self):
+        while self.running:
+            self.camera.get_frame()
+            print('filter')
+            # time.sleep(0.01)
+
+    def stop(self):
+        self.running = False
+
 
 def tiny_yolo_gen(q):
     camera = VideoCamera()
@@ -147,7 +163,10 @@ def tiny_yolo_gen(q):
         start = time.time()
         if not ret:
             break
+        th = FilterThread(camera)
+        th.start()
         image = video_detection(sess, frame)
+        th.stop()
         end = time.time()
         t = end - start
         fps  = "Fps: {:.2f}".format(1 / t)
@@ -156,7 +175,17 @@ def tiny_yolo_gen(q):
         try:
             q.put (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
-            ret, frame = camera.get_frame()
+            ret = False
+            num = 0
+            while not ret:
+                ret, frame = camera.get_frame()
+                time.sleep(0.01)
+                num = num + 1
+                if num >= 100:
+                    break
+            if num >= 100:
+                break
+            print(num)
         except:
             print('yield error')
             break
