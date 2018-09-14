@@ -15,8 +15,6 @@ import tensorflow
 import os
 import json
 
-detection_process = False
-detection_process_username = None
 QRespList = {}
 QNameList = {}
 q_resp = multiprocessing.Queue()
