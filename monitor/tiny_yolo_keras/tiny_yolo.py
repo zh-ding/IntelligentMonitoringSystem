@@ -155,7 +155,7 @@ class FaceThread(Thread):
         face_rec(self.frame, self.q)
 
 
-def tiny_yolo_gen(q, q_name):
+def tiny_yolo_gen(q_resp, q_name):
     camera = VideoCamera()
     global sess
     global yolo_model, class_names, anchors
@@ -188,14 +188,13 @@ def tiny_yolo_gen(q, q_name):
         end = time.time()
         t = end - start
         fps  = "Fps1: {:.2f}".format(1 / t)
-        print(fps)
+        #print(fps)
         face_th.join()
-        #face_rec(frame, face_q)
         que.put(1)
         end = time.time()
         t = end - start
         fps  = "Fps2: {:.2f}".format(1 / t)        
-        print(fps)
+        #print(fps)
         while not face_q.empty():
             dic = face_q.get()
             cv2.rectangle(image, (dic['left'], dic['bottom'] - 35), (dic['right'], dic['bottom']), (0, 0, 255), cv2.FILLED)
@@ -205,7 +204,7 @@ def tiny_yolo_gen(q, q_name):
 
         ret, jpeg = cv2.imencode('.jpg', image)
         try:
-            q.put (b'--frame\r\n'
+            q_resp.put(b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
             num = 0
             ret = False

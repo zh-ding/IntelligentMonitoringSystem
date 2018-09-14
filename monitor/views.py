@@ -4,7 +4,9 @@ from django.http.response import HttpResponseServerError
 from django.views.decorators import gzip
 from tiny_yolo import tiny_yolo_gen
 from user.views import check_cookie
-from multiprocessing import Process, Queue
+import multiprocessing
+import queue
+import threading
 
 import time
 import json
@@ -15,54 +17,46 @@ import json
 
 detection_process = False
 detection_process_username = None
-QList = {}
+QRespList = {}
 QNameList = {}
+q_resp = multiprocessing.Queue()
+q_name = multiprocessing.Queue()
 
-def gen():
-    q = Queue()
-    q_name = Queue()
-    p = Process(target=tiny_yolo_gen, args=(q, q_name))
-    p.start()
-    current_connected = True
-    global detection_process, QNameList
-    while True:
-        if not q.empty():
-            res = q.get()
-            for i in QList:
-                QList[i].put(res)
-            if current_connected:
-                try:
-                    yield res
-                except:
-                    current_connected = False
-                    global detection_process_username
-                    detection_process_username = None
-                    if len(QList) == 0:
-                        p.terminate()
-                        detection_process = False
-                        break
-            else:
-                if len(QList) == 0:
-                    p.terminate()
-                    detection_process = False
-                    break
-        while not q_name.empty():
-            name = q_name.get()
-            if name == 'Unknown':
-                continue
-            for i in  QNameList:
-                QNameList[i].append(name)
+class ReadFromAnotherProcess(threading.Thread):    
+    def __init__(self, QRespList, QNameList):
+        super().__init__()
+        self.QRespList = QRespList
+        self.QNameList = QNameList
 
+    def run(self):
+        while True:
+            if not q_resp.empty():
+                res = q_resp.get()
+                for i in self.QRespList:
+                    self.QRespList[i].put(res)
+            while not q_name.empty():
+                name = q_name.get()
+                if name == 'Unknown':
+                    continue
+                for i in self.QNameList:
+                    self.QNameList[i].append(name)
+            time.sleep(0.02)
+
+p = multiprocessing.Process(target=tiny_yolo_gen, args=(q_resp, q_name))
+p.start()
+th_rfap = ReadFromAnotherProcess(QRespList, QNameList)
+th_rfap.start()
 
 def fetch(username):
-    q = Queue()
-    QList[username] = q
     while True:
-        if not q.empty():
+        print('fetch ' + username)
+        if not QRespList[username].empty():
+            res = QRespList[username].get()
+            print('3')
             try:
-                yield q.get()
+                yield res
             except:
-                del QList[username]
+                del QRespList[username]
                 del QNameList[username]
                 break
 
@@ -83,29 +77,20 @@ def video_feed(request):
     if status[0] == -1:
         return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/login'})
     username = status[1]
-    global detection_process_username, QList
-    if username in QList or username == detection_process_username:
+    if username in QRespList:
         return render(request, 'redirect.html', {'message': 'Current user is right now watching, please use another account.', 'url': '/'})
-    global detection_process
-    if not detection_process:
-        detection_process = True
-        detection_process_username = username
-        try:
-            return StreamingHttpResponse(gen(),content_type="multipart/x-mixed-replace;boundary=frame")
-        except:
-            print("aborted")
-    else:
-        try:
-            return StreamingHttpResponse(fetch(username),content_type="multipart/x-mixed-replace;boundary=frame")
-        except:
-            print('aborted')
+    QNameList[username] = []
+    QRespList[username] = queue.Queue()
+    try:
+        return StreamingHttpResponse(fetch(username),content_type="multipart/x-mixed-replace;boundary=frame")
+    except:
+        print('aborted')
 
 def monitor(request):
     status = check_cookie(request)
     if status[0] == -1:
         return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/login'})
     username = status[1]
-    QNameList[username] = []
-    if username in QList or username == detection_process_username:
+    if username in QRespList:
         return render(request, 'redirect.html', {'message': 'Current user is right now watching, please use another account.', 'url': '/'})
     return render(request, 'monitor.html', {'username': username})
