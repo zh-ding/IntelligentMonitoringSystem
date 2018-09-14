@@ -37,19 +37,19 @@ def login(request):
             cursor.execute("INSERT INTO logininfo (user_id, cookie, expiretime) VALUES (%d, '%s', %d)"%(user_id, md5string, timestamp + 7200))
             db.commit()
             db.close()
-            res = render(request, 'redirect.html', {'message': '登录成功，请稍后', 'url': '/'})
+            res = render(request, 'redirect.html', {'message': 'Sign in successfully, please wait a second.', 'url': '/'})
             res.set_cookie(key='ptoken', value=md5string)
             return res
         else:
-            return render(request, 'login.html', {'message': '错误的用户名或密码'})
+            return render(request, 'login.html', {'message': 'Wrong username or password.'})
 
 
 def add_user(request):
     status = check_cookie(request)
     if status[0] != 0:
-        return render(request, 'redirect.html', {'message': '请使用管理员账号登录后操作', 'url': '/'})
+        return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/'})
     if request.method == 'GET':
-        return render(request, 'add_user.html', {'message': ''})
+        return render(request, 'add_user.html', {'message': '', 'username': status[1]})
     else:
         username = request.POST['username']
         password = request.POST['password']
@@ -58,31 +58,31 @@ def add_user(request):
         cursor.execute('SELECT * FROM user WHERE username = %s', username)
         result = cursor.fetchone()
         if result:
-            return render(request, 'add_user.html', {'message': '用户名已存在，请重新输入'})
+            return render(request, 'add_user.html', {'message': 'Username already exists, please change.', 'username': status[1]})
         cursor.execute('INSERT INTO user (username, password, priv) VALUES (%s, md5(%s), 1)', (username, password))
         db.commit()
         db.close()
-        return render(request, 'redirect.html', {'message': '添加成功，请稍后', 'url': '/'})
+        return render(request, 'redirect.html', {'message': 'Add successfully, please wait a second.', 'url': '/'})
 
 
 def delete_user(request):
     status = check_cookie(request)
     if status[0] != 0:
-        return render(request, 'redirect.html', {'message': '请使用管理员账号登录后操作', 'url': '/'})
+        return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/'})
     user_id = request.GET['id']
     db = connect_to_db()
     cursor = db.cursor()
     cursor.execute('DELETE FROM user WHERE user_id = %s', user_id)
     db.commit()
-    return render(request, 'redirect.html', {'message': '删除成功，请稍后', 'url': '/'})
+    return render(request, 'redirect.html', {'message': 'Delete successfully, please wait a second.', 'url': '/'})
 
 
 def change_password(request):
     status = check_cookie(request)
     if status[0] == -1:
-        return render(request, 'redirect.html', {'message': '请登录后操作', 'url': '/'})
+        return render(request, 'redirect.html', {'message': 'Please sign in first.', 'url': '/'})
     if request.method == 'GET':
-        return render(request, 'change_password.html', {'message': ''})
+        return render(request, 'change_password.html', {'message': '', 'username': status[1]})
     else:
         current_password = request.POST['password']
         new_password = request.POST['password1']
@@ -91,10 +91,10 @@ def change_password(request):
         cursor.execute('SELECT user_id FROM user WHERE username = %s and password = md5(%s)', (status[1], current_password))
         result = cursor.fetchone()
         if not result:
-            return render(request, 'change_password.html', {'message': '当前密码不正确，请重新输入'})
+            return render(request, 'change_password.html', {'message': 'Incorrect password, please try again.', 'username': status[1]})
         cursor.execute("UPDATE user SET password = md5('%s') WHERE user_id = %s" % (new_password, result[0]))
         db.commit()
-        return render(request, 'redirect.html', {'message': '修改成功，请稍后', 'url': '/'})
+        return render(request, 'redirect.html', {'message': 'Change successfully, please wait a second.', 'url': '/'})
 
 
 def check_cookie(request):

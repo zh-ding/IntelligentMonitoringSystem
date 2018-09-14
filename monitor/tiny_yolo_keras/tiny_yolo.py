@@ -12,6 +12,7 @@ import json
 from threading import Thread
 import queue
 import threading
+from face import face_rec
 
 scores = None
 boxes = None
@@ -144,14 +145,27 @@ class FilterThread(Thread):
                 self.q.get()
                 break
 
+class FaceThread(Thread):
+    def __init__(self, frame, q):
+        super().__init__()
+        self.frame = frame
+        self.q = q
 
-def tiny_yolo_gen(q):
+    def run(self):
+        face_rec(self.frame, self.q)
+
+
+def tiny_yolo_gen(q, q_name):
     camera = VideoCamera()
     global sess
     global yolo_model, class_names, anchors
     global image_shape, yolo_outputs
     global scores, boxes, classes
     ret, frame = camera.get_frame()
+    with open('config.json', 'r') as f:
+        conf = json.load(f)
+    height = int(conf['height'])
+    frame = cv2.resize(frame, (height, int(height*frame.shape[0]/frame.shape[1])))
     if not sess:
         sess = K.get_session()
     yolo_model = load_model("monitor/tiny_yolo_keras/model_data/tiny-yolo.h5")    
@@ -160,17 +174,35 @@ def tiny_yolo_gen(q):
     image_shape = np.float32(frame.shape[0]), np.float32(frame.shape[1])
     yolo_outputs = yolo_head(yolo_model.output, anchors, len(class_names))
     scores, boxes, classes = yolo_eval(yolo_outputs, image_shape=image_shape, score_threshold=.3)
+    
+    
+    face_q = queue.Queue()
     que = queue.Queue()
     while ret:
-        start = time.time()
         th = FilterThread(camera, que)
         th.start()
+        face_th = FaceThread(frame, face_q)
+        face_th.start()
+        start = time.time()
         image = video_detection(sess, frame)
+        end = time.time()
+        t = end - start
+        fps  = "Fps1: {:.2f}".format(1 / t)
+        print(fps)
+        face_th.join()
+        #face_rec(frame, face_q)
         que.put(1)
         end = time.time()
         t = end - start
-        fps  = "Fps: {:.2f}".format(1 / t)
+        fps  = "Fps2: {:.2f}".format(1 / t)        
         print(fps)
+        while not face_q.empty():
+            dic = face_q.get()
+            cv2.rectangle(image, (dic['left'], dic['bottom'] - 35), (dic['right'], dic['bottom']), (0, 0, 255), cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(image, dic['name'], (dic['left'] + 6, dic['bottom'] - 6), font, 1.0, (255, 255, 255), 1)
+            q_name.put(dic['name'])
+
         ret, jpeg = cv2.imencode('.jpg', image)
         try:
             q.put (b'--frame\r\n'
@@ -182,65 +214,8 @@ def tiny_yolo_gen(q):
                 num = num + 1
                 if num >= 100000:
                     break
+            frame = cv2.resize(frame, (height, int(height*frame.shape[0]/frame.shape[1])))
         except:
             print('yield error')
             break
     print('yolo end.')
-
-if __name__ == '__main__':
-    sess = K.get_session()
-
-    yolo_model = load_model("model_data/tiny-yolo.h5")
-    #yolo_model.summary()
-    
-    class_names = read_classes("model_data/yolo_coco_classes.txt")
-    anchors = read_anchors("model_data/yolo_anchors.txt")
-
-    '''
-    # image detection
-    image_file = "dog.jpg"
-    image_path = "images/"
-    image_shape = np.float32(cv2.imread(image_path + image_file).shape[:2])
-
-    yolo_outputs = yolo_head(yolo_model.output, anchors, len(class_names))
-    scores, boxes, classes = yolo_eval(yolo_outputs, image_shape=image_shape)
-    out_scores, out_boxes, out_classes = image_detection(sess, image_path, image_file)
-    '''
-
-    # video detection
-    camera = cv2.VideoCapture(0)
-
-    #camera.set(cv2.CAP_PROP_FRAME_WIDTH, 288) # 設計解析度
-    #camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 288)
-    #print('WIDTH', camera.get(3), 'HEIGHT', camera.get(4))
-    #print('FPS', camera.get(5))
-
-    image_shape = np.float32(camera.get(4)), np.float32(camera.get(3))
-    yolo_outputs = yolo_head(yolo_model.output, anchors, len(class_names))
-    scores, boxes, classes = yolo_eval(yolo_outputs, image_shape=image_shape, score_threshold=.3)
-
-    while camera.isOpened():
-        start = time.time()
-        ret, frame = camera.read()
-
-        if ret:
-            image = video_detection(sess, frame)
-            end = time.time()
-
-            # fps
-            t = end - start
-            fps  = "Fps: {:.2f}".format(1 / t)
-            # display a piece of text to the frame
-            #cv2.putText(image, fps, (10, 30),
-		    #            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)	
-
-            cv2.imshow('image', image)
-            print(type(image))
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        else:
-            break
-    
-    camera.release()
-    cv2.destroyAllWindows()

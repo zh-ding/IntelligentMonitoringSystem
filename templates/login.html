@@ -1,0 +1,64 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>
+      Intelligent Monitoring System
+    </title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap.min.css' %}">
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'sticky-footer-navbar.css' %}">
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'signin.css' %}">
+  </head>
+  <body>
+    <header>
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="/">Intelligent Monitoring System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+              <a class="nav-link" href="#">Sign in</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav mt-2 mt-md-0">
+            <li class="nav-item active">
+              <span class="nav-link">Welcome</span>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <main role="main" class="container text-center">
+      <form class="form-signin" action='/login/' method='post'>
+        {% csrf_token %}
+        {% load static %}
+        <img class="mb-4" src="{% static 'logo.png' %}" alt="" width="234" height="67">
+        <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+        <label for="inputEmail" class="sr-only">Username</label>
+        <input type="text" name="username" id="username" class="form-control" placeholder="Username" required autofocus>
+        <label for="inputPassword" class="sr-only">Password</label>
+        <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
+        <p style="color:red" id='error_message'>          
+          {% ifequal message '' %}
+            <br>
+          {% else %}
+            {{message}}
+          {% endifequal%}
+        </p>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+      </form>
+    </main>
+    
+    <footer class="footer">
+      <div class="container">
+        <span class="text-muted">© Copyright 2018 Zheng Ding&Yujun Zhang | <a href="mailto:dingzheng214@126.com">Email to us</a> | Powered by Django</span>
+      </div>
+    </footer>
+  </body>
+</html>

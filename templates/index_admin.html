@@ -1,0 +1,75 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>
+      Intelligent Monitoring System
+    </title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'sticky-footer-navbar.css' %}">
+  </head>
+  <body>
+    <header>
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="/">Intelligent Monitoring System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+              <a class="nav-link" href="#">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/monitor">Monitor</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav mt-2 mt-md-0">
+            <li class="nav-item active">
+              <span class="nav-link">{{username}}</span>
+            </li>
+            <li>
+              <a href="/changepwd"><button class="btn btn-outline-success my-2 my-sm-0">Change Password</button></a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <main role="main" class="container text-center ml-sm-auto px-4">
+      <br>
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+        <h1 class="h2">Userlist</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/adduser"><button class="btn btn-outline-secondary">Add User</button></a>
+        </div>
+      </div>
+      <table class="table table-hover table-striped">
+        <thead class="thead-light">
+          <tr class="info">
+            <th width="10%">No.</th>
+            <th width="65%">Username</th>
+            <th width="25%">Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in userlist %}
+          <tr>
+            <td width="10%">{{forloop.counter}}</td>
+            <td width="65%">{{user.name}}</td>
+            <td width="25%"><a href="/delete?id={{user.id}}"><button class="btn btn-sm btn-outline-danger my-2 my-sm-0">Delete</button></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <span class="text-muted">© Copyright 2018 Zheng Ding&Yujun Zhang | <a href="mailto:dingzheng214@126.com">Email to us</a> | Powered by Django</span>
+      </div>
+    </footer>
+  </body>
+</html>

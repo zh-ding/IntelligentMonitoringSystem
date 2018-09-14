@@ -11,17 +11,20 @@ import json
 import cv2
 import tensorflow
 import os
+import json
 
 detection_process = False
 detection_process_username = None
 QList = {}
+QNameList = {}
 
 def gen():
     q = Queue()
-    p = Process(target=tiny_yolo_gen, args=(q, ))
+    q_name = Queue()
+    p = Process(target=tiny_yolo_gen, args=(q, q_name))
     p.start()
     current_connected = True
-    global detection_process
+    global detection_process, QNameList
     while True:
         if not q.empty():
             res = q.get()
@@ -43,6 +46,13 @@ def gen():
                     p.terminate()
                     detection_process = False
                     break
+        while not q_name.empty():
+            name = q_name.get()
+            if name == 'Unknown':
+                continue
+            for i in  QNameList:
+                QNameList[i].append(name)
+
 
 def fetch(username):
     q = Queue()
@@ -53,17 +63,29 @@ def fetch(username):
                 yield q.get()
             except:
                 del QList[username]
+                del QNameList[username]
                 break
+
+def get_black_name(request):
+    status = check_cookie(request)
+    if status[0] == -1:
+        return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/login'})
+    username = status[1]
+    global QNameList
+    namelist = list(set(QNameList[username]))
+    QNameList[username] = []
+    resp = {'name': namelist}
+    return HttpResponse(json.dumps(resp), content_type="application/json")
 
 @gzip.gzip_page
 def video_feed(request):
     status = check_cookie(request)
     if status[0] == -1:
-        return render(request, 'redirect.html', {'message': '请登录后查看', 'url': '/login'})
+        return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/login'})
     username = status[1]
     global detection_process_username, QList
     if username in QList or username == detection_process_username:
-        return render(request, 'redirect.html', {'message': '对不起，当前用户正在登录查看中，请使用其他账号登录查看或下线', 'url': '/'})
+        return render(request, 'redirect.html', {'message': 'Current user is right now watching, please use another account.', 'url': '/'})
     global detection_process
     if not detection_process:
         detection_process = True
@@ -81,8 +103,9 @@ def video_feed(request):
 def monitor(request):
     status = check_cookie(request)
     if status[0] == -1:
-        return render(request, 'redirect.html', {'message': '请登录后查看', 'url': '/login'})
+        return render(request, 'redirect.html', {'message': 'Unauthorized.', 'url': '/login'})
     username = status[1]
+    QNameList[username] = []
     if username in QList or username == detection_process_username:
-        return render(request, 'redirect.html', {'message': '对不起，当前用户正在登录查看中，请使用其他账号登录查看或下线', 'url': '/'})
-    return render(request, 'monitor.html')
+        return render(request, 'redirect.html', {'message': 'Current user is right now watching, please use another account.', 'url': '/'})
+    return render(request, 'monitor.html', {'username': username})

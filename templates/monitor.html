@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>
+      Intelligent Monitoring System
+    </title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap.min.css' %}">
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'sticky-footer-navbar.css' %}">
+    <script>
+      function update(){
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            var json = JSON.parse(this.responseText);
+            console.log(json);
+            document.getElementById('blacklist').innerHTML = '<h1 class="mt-5">Blacklist</h1>';
+            for(name of json['name']){
+              document.getElementById('blacklist').innerHTML += '<h4>' + name + '</h4>'; 
+            }
+            setTimeout(update, 1500);
+            return;
+          }
+        };
+        xhttp.open("GET", "/monitor/blacklist", true);
+        xhttp.send();
+      }
+      setTimeout(update, 5000);
+    </script>
+  </head>
+  <body>
+    <header>
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="/">Intelligent Monitoring System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item active">
+              <a class="nav-link" href="#">Monitor</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav mt-2 mt-md-0">
+            <li class="nav-item active">
+              <span class="nav-link">{{username}}</span>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <main role="main" class="container-fluid">
+      <div class="row">
+        <div class="col-sm-10">
+          <h1 class="mt-5">Video Streaming</h1>
+          <img src="{% url 'video_feed' %}"/>
+        </div>
+        <div class="col-sm-2" id="blacklist">
+          <h1 class="mt-5">Blacklist</h1>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <span class="text-muted">© Copyright 2018 Zheng Ding&Yujun Zhang | <a href="mailto:dingzheng214@126.com">Email to us</a> | Powered by Django</span>
+      </div>
+    </footer>
+  </body>
+</html>
