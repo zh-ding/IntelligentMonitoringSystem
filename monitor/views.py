@@ -49,10 +49,8 @@ th_rfap.start()
 
 def fetch(username):
     while True:
-        print('fetch ' + username)
         if not QRespList[username].empty():
             res = QRespList[username].get()
-            print('3')
             try:
                 yield res
             except:

@@ -1,6 +1,10 @@
 import face_recognition
 import os
 import cv2
+from threading import Thread
+import json
+from django.core.mail import send_mail
+import time
 
 facelist = os.listdir('facedata/')
 known_face_encodings = []
@@ -12,6 +16,22 @@ for file in facelist:
     face_encoding = face_recognition.face_encodings(face_image)[0]
     known_face_encodings.append(face_encoding)
     known_face_names.append(file.split('.')[0])
+
+
+class MailThread(Thread):
+    def __init__(self, name, datetime):
+        super().__init__()
+        self.name = name
+        self.datetime = datetime
+
+    def run(self):
+        with open('config.json') as f:
+            mail = json.load(f)['mail']
+        send_mail('[alert!]' + self.datetime + ' ' + self.name + ' appeared!!!', 
+            'This is an automated email. Be aware of this alert!', 
+            mail['EMAIL_HOST_USER'], 
+            mail['RECIPIENT_LIST'],
+        )
 
 def face_rec(frame, q):
     
@@ -38,7 +58,9 @@ def face_rec(frame, q):
             name = known_face_names[first_match_index]
 
         face_names.append(name)
-
+        if name != 'Unknown':
+            th_mail = MailThread(name, time.strftime("%a, %d %b %Y %H:%M:%S"))
+            th_mail.start()
 
 
     # Display the results
